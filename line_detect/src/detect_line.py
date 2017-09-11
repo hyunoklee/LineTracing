@@ -31,6 +31,7 @@ class LineDetectorNode(object):
         self.stats = Stats()
         self.detector = None
         self.updateParams(None)
+        self.dark_count = 0
 
         # Only be verbose every 10 cycles
         self.intermittent_interval = 1
@@ -39,7 +40,8 @@ class LineDetectorNode(object):
         # Publishers
         self.pub_lines = rospy.Publisher("segment_list", SegmentList, queue_size=1)
         self.pub_image_with_line = rospy.Publisher("image_with_lines", Image, queue_size=1)
-        self.pub_line_state = rospy.Publisher('/line_state', String, queue_size=1)
+        #self.pub_line_state = rospy.Publisher('/line_state', String, queue_size=1)
+        self.pub_signal = rospy.Publisher('/signals', String, queue_size=1)
         #self.pub_image_origin = rospy.Publisher("image_with_origin", Image, queue_size=1)
         #self.pub_image_cal = rospy.Publisher("image_with_cal", Image, queue_size=1)
 
@@ -76,7 +78,7 @@ class LineDetectorNode(object):
     def updateLineCheck(self, _event):
         return
         if self.Linedisable == True and self.MotorStart == True:
-            self.pub_line_state.publish("TUNNEL_LINE")
+            #self.pub_line_state.publish("TUNNEL")
             print("here is tunnel.................................")
         self.Linedisable = True
 
@@ -128,6 +130,18 @@ class LineDetectorNode(object):
         except ValueError as e:
             self.loginfo('Could not decode image: %s' % e)
             return
+
+        #dark count and tunnel check
+        hist = cv2.calcHist([image_cv], [0], None, [5], [0, 5])
+        if (hist[0] + hist[1]) > 150000 :
+            self.dark_count = self.dark_count + 1
+        else :
+            self.dark_count = 0
+
+        if 5 < self.dark_count < 10 :
+            self.pub_signal.publish("TUNNEL")
+
+
 
         #calibration proc && image publish
         K_undistort = np.array(self.c['camera_matrix'])
@@ -258,4 +272,4 @@ if __name__ == '__main__':
     rospy.init_node('line_detector',anonymous=False)
     line_detector_node = LineDetectorNode()
     rospy.on_shutdown(line_detector_node.onShutdown)
-    rospy.spin()
+rospy.spin()

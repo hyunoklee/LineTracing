@@ -49,6 +49,17 @@ For more info on algorithm and parameters please refer to the google doc:
 		# Publishers
 		self.pub_car_cmd = rospy.Publisher('/cmd_vel_line', Twist, queue_size=5)
 
+		rospy.Timer(rospy.Duration.from_sec(1.0), self.line_check)
+
+
+	def line_check(self,_event) :
+		cur_time = rospy.get_time()
+		if 0 != self.yellow_time and  0 != self.white_time :
+			if cur_time - self.yellow_time >2 and cur_time - self.white_time >2 :
+				print("there is no line !!!!!!!!!!!")
+				twist_n = Twist(); twist_n.linear.x = 0.01;twist_n.angular.z = 0;
+				self.pub_car_cmd.publish(twist_n)
+
 	def processSegments(self,segment_list_msg):
 		if not self.active:
 			return
@@ -70,7 +81,7 @@ For more info on algorithm and parameters please refer to the google doc:
 	    # arrange ,  x value of P1 is lower than x value of P2
 
 		if segment.color == segment.YELLOW:
-
+			self.yellow_time = rospy.get_time()
 			if segment.pixels_normalized[0].x <= segment.pixels_normalized[1].x:
 				p1 = np.array([segment.pixels_normalized[0].x, segment.pixels_normalized[0].y])
 				p2 = np.array([segment.pixels_normalized[1].x, segment.pixels_normalized[1].y])
@@ -81,7 +92,13 @@ For more info on algorithm and parameters please refer to the google doc:
 			# check infinite value
 			delta_p = p2-p1
 			if delta_p[0] == 0 :
-				rospy.loginfo( "delta_p[0] isinfinite happen" )
+				rospy.loginfo( "delta_p[0] isinfinite happen1" )
+				##this is need at Sharp curve like Bar yellow curve Line
+				twist_tmp = Twist()
+				twist_tmp.linear.x = 0.05 ;  twist_tmp.angular.z = 0;
+				self.pub_car_cmd.publish(twist_tmp)
+				sleep(0.5);
+				self.onVehicleStop()
 				return
 
 			# caluration inclination
@@ -90,12 +107,12 @@ For more info on algorithm and parameters please refer to the google doc:
 			# caluration x,y intercep
 			extend_y = inclination*p1[0] + p1[1]
 			if inclination == 0 :
-				rospy.loginfo( "inclination isinfinite happen" )
+				rospy.loginfo( "inclination isinfinite happen2" )
 				##this is need at Sharp curve like Bar yellow curve Line
 				twist_tmp = Twist()
 				twist_tmp.linear.x = 0.05 ;  twist_tmp.angular.z = 0;
 				self.pub_car_cmd.publish(twist_tmp)
-				sleep(2);
+				sleep(0.5);
 				self.onVehicleStop()
 				return
 			extend_x = extend_y/inclination
@@ -120,7 +137,6 @@ For more info on algorithm and parameters please refer to the google doc:
 			self.yellow_y = beta*extend_y + (1 - beta)*self.yellow_y
 			self.yellow_length = beta*extend_length + (1 - beta)*self.yellow_length
 			self.yellow_degree = beta*extend_degree + (1 - beta)*self.yellow_degree
-			self.yellow_time = rospy.get_time()
 
 			# Now there is yellow line,
 			# Check the distance from the yellow line, and determine the degree of rotation of the circle.
@@ -160,7 +176,7 @@ For more info on algorithm and parameters please refer to the google doc:
 				self.pub_car_cmd.publish(twist_w)
 				##this is need at Sharp curve like Bar yellow curve Line
 				sleep(0.2);
-				twist_w.linear.x = 0.032; twist_w.angular.z = 0;
+				twist_w.linear.x = 0.03; twist_w.angular.z = 0;
 				self.pub_car_cmd.publish(twist_w)
 				sleep(0.1);
 				self.onVehicleStop()
@@ -168,7 +184,21 @@ For more info on algorithm and parameters please refer to the google doc:
 
 			else :
 				rospy.loginfo(' suspend only white line ,  yellow line is detected before %.2f  ', self.white_time - self.yellow_time)
-
+				rospy.loginfo('only white line detect_yellow line is detected before %.2f sec ',
+							  self.white_time - self.yellow_time)
+				'''
+				twist_w = Twist()
+				twist_w.linear.x = 0.03;
+				twist_w.angular.z = 0.2;
+				self.pub_car_cmd.publish(twist_w)
+				##this is need at Sharp curve like Bar yellow curve Line
+				sleep(0.2);
+				twist_w.linear.x = 0.032;
+				twist_w.angular.z = 0;
+				self.pub_car_cmd.publish(twist_w)
+				sleep(0.1);
+				self.onVehicleStop()
+				'''
 		#send motor control node
 
 		#rospy.loginfo('publish velocity %.2f , argural %.1f',velocity, angular )

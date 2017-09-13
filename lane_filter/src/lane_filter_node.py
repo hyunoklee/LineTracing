@@ -57,7 +57,7 @@ For more info on algorithm and parameters please refer to the google doc:
 		if 0 != self.yellow_time and  0 != self.white_time :
 			if cur_time - self.yellow_time >2 and cur_time - self.white_time >2 :
 				print("there is no line !!!!!!!!!!!")
-				twist_n = Twist(); twist_n.linear.x = 0.01;twist_n.angular.z = 0;
+				twist_n = Twist(); twist_n.linear.x = 0.02;twist_n.angular.z = 0.1;
 				self.pub_car_cmd.publish(twist_n)
 
 	def processSegments(self,segment_list_msg):

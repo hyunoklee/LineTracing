@@ -73,14 +73,6 @@ class motor_controller(object):
 		#print( "final test  test cbCmdVelParking  %d, %d " , twist.linear.x, twist.angular.z)
 		self.pub_car_cmd.publish(twist)
 
-	def cbCmdVelLine(self,cmd_vel_line_msg):
-		twist = Twist()
-		twist.linear.x = cmd_vel_line_msg.linear.x
-		twist.angular.z = cmd_vel_line_msg.angular.z
-		if self.con_state == "LINE" :
-			print( "LINECmdVel   %d, %d  " , twist.linear.x, twist.angular.z)
-			self.publishCmd(twist)
-
 	def cbCmdVelParking(self,cmd_vel_parking_msg):
 		twist = Twist()
 		twist.linear.x = cmd_vel_parking_msg.linear.x
@@ -89,11 +81,21 @@ class motor_controller(object):
 			#print( "ParkingCmdVel   %d, %d  " , twist.linear.x, twist.angular.z)
 			self.publishCmd(twist)
 
+	def cbCmdVelLine(self,cmd_vel_line_msg):
+		twist = Twist()
+		twist.linear.x = cmd_vel_line_msg.linear.x
+		twist.angular.z = cmd_vel_line_msg.angular.z
+		if self.con_state == "LINE" :
+			print( "LINECmdVel   %d, %d  " , twist.linear.x, twist.angular.z)
+			self.publishCmd(twist)
+
 	def cbCmdVelTunnel(self,cmd_vel_tunnel_msg):
 		twist = Twist()
 		twist.linear.x = cmd_vel_tunnel_msg.linear.x
 		twist.angular.z = cmd_vel_tunnel_msg.angular.z
 		if self.con_state == "TUNNEL" :
+			self.con_state == "TUNNEL"
+			#print("TunnelCmdVel   %d, %d  ", twist.linear.x, twist.angular.z)
 			self.publishCmd(twist)
 
 
@@ -103,6 +105,8 @@ class motor_controller(object):
 		elif signal_msg.data == "PARKING" :
 			self.con_state = "PARKING"
 		elif signal_msg.data == "TUNNEL" :
+			sleep(10)
+			print("tunnel contorl start ....$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 			self.con_state = "TUNNEL"
 		elif signal_msg.data == "LED" :
 			self.con_state = "LED"

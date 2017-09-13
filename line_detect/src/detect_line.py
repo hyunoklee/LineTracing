@@ -138,7 +138,7 @@ class LineDetectorNode(object):
         else :
             self.dark_count = 0
 
-        if 5 < self.dark_count < 10 :
+        if 3 < self.dark_count < 9 :
             self.pub_signal.publish("TUNNEL")
 
 

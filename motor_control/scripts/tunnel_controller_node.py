@@ -29,7 +29,8 @@ class tunnel_controller(object):
         self.FirstCycle = True
         self.gostart_distance = 0
         self.SearchStop = None
-        self.obstacle = False
+        self.frontObstacle = False
+        self.leftObstacle = False
         # Publicaiton
         self.pub_cmd_vel_tunnel = rospy.Publisher('/cmd_vel_tunnel', Twist, queue_size=5)
 
@@ -39,6 +40,7 @@ class tunnel_controller(object):
         self.sub_imu_reading = None
         self.sub_signal_reading = rospy.Subscriber("/signals", String, self.cbSignal, queue_size=1)
         #rospy.Timer(rospy.Duration.from_sec(3.0), self.send_motor_start)
+        #self.sub_laser_scan = rospy.Subscriber("/scan", LaserScan, self.cbLaserScan, queue_size=1)
 
     def cbSignal(self, signal_msg):
         if signal_msg.data == "TUNNEL":
@@ -52,6 +54,51 @@ class tunnel_controller(object):
         imu = [imu_msg.orientation.x,imu_msg.orientation.y,imu_msg.orientation.z,imu_msg.orientation.w]
         #print("cbImuState : ",imu)
 
+
+    def cbOdometry(self, odom_msg):
+        self.CurOdom = [odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y, odom_msg.pose.pose.orientation.w]
+        if self.FirstCycle == True :
+            print("FirstCycle ...............")
+            self.FirstCycle == False
+
+        if self.TunnelState == "START" :
+            print("START ...............")
+            self.vehicleStop()
+            self.TunnelState = "ANG_SEARCH_START"
+
+        if self.TunnelState == "ANG_SEARCH_START" :
+            print("ANG_SEARCH_START ...............")
+            twist = Twist();twist.linear.x = 0;twist.angular.z = -0.2;
+            self.pub_cmd_vel_tunnel.publish(twist)
+            sleep(1.5)
+            self.TunnelState = "LIDAR_CHECK"
+
+        if self.TunnelState == "LIDAR_CHECK":
+            print("LIDAR_CHECK ...............")
+            self.vehicleStop()
+            sleep(0.3)
+            if self.frontObstacle  == False :
+                self.vehicleStop()
+                self.TunnelState = "GO"
+            else :
+                self.TunnelState = "ANG_SEARCH_START"
+
+        if self.TunnelState == "GO" :
+
+            twist = Twist();
+            if self.leftObstacle  == False :
+                twist.linear.x = 0.05; twist.angular.z = 0.0;
+                twist.angular.z = 0.1
+            self.pub_cmd_vel_tunnel.publish(twist)
+            #sleep(0.1)
+            print("GO ...............", self.frontObstacle, self.leftObstacle )
+
+            if self.frontObstacle == True or self.leftObstacle == True:
+                self.TunnelState = "ANG_SEARCH_START"
+                self.vehicleStop()
+                print("GO ...............2", self.frontObstacle, self.leftObstacle )
+
+    '''
     def cbOdometry(self, odom_msg):
         self.CurOdom = [odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y, odom_msg.pose.pose.orientation.w]
         if self.FirstCycle == True :
@@ -74,7 +121,7 @@ class tunnel_controller(object):
 
         if self.TunnelState == "ANG_SEARCH_START" :
             print("ANG_SEARCH_START ...............")
-            twist = Twist();twist.linear.x = 0;twist.angular.z = 0.1;
+            twist = Twist();twist.linear.x = 0;twist.angular.z = -0.2;
             self.pub_cmd_vel_tunnel.publish(twist)
             sleep(2)
             self.gostart_distance = dst
@@ -94,33 +141,44 @@ class tunnel_controller(object):
 
             twist = Twist(); twist.linear.x = 0.05; twist.angular.z = 0.0;
             self.pub_cmd_vel_tunnel.publish(twist)
-            sleep(0.1)
+            #sleep(0.1)
             self.current_distance = dst
             print("GO ...............", self.current_distance, self.gostart_distance, self.obstacle)
-            if self.current_distance  >  self.gostart_distance :
-                self.TunnelState = "ANG_SEARCH_START"
-                self.vehicleStop()
-                print("GO ...............1", self.current_distance, self.gostart_distance, self.obstacle)
+
             if self.obstacle == True :
                 self.TunnelState = "ANG_SEARCH_START"
                 self.vehicleStop()
                 print("GO ...............2", self.current_distance, self.gostart_distance, self.obstacle)
+        '''
 
     def cbLaserScan(self, laser_scan_msg):
         #return
         self.laser_scan = laser_scan_msg.ranges
-        self.obstacle = False
-        rangg = 20
+        self.frontObstacle = False
+        rangg = 10
         for i in range(0,rangg*2) :
             d = i - rangg
             if d < 0 :
                d = 360 + d
             else :
                 d = i
-            if self.laser_scan[d] != 0 and self.laser_scan[d] < 0.5:
-               #rospy.loginfo("_%d , %0.3f" % (d, self.laser_scan[d]))
-               self.obstacle = True
-        print("obstacle " , self.obstacle )
+            if self.laser_scan[d] != 0 and self.laser_scan[d] < 0.15:
+               rospy.loginfo("_%d , %0.3f" % (d, self.laser_scan[d]))
+               self.frontObstacle = True
+
+        self.leftObstacle = False
+        rangg = 10
+        for i in range(0,rangg*2) :
+            d = i - rangg
+            if d < 0 :
+               d = 90 + d
+            else :
+                d = i
+            if self.laser_scan[d] != 0 and self.laser_scan[d] < 0.2:
+               rospy.loginfo("_%d , %0.3f" % (d, self.laser_scan[d]))
+               self.leftObstacle = True
+
+        print("obstacle Front " , self.frontObstacle,",Left ",self.leftObstacle )
 
     def vehicleStop(self):
         twist = Twist(); twist.linear.x = 0; twist.angular.z = 0;

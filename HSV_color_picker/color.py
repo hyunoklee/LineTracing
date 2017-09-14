@@ -21,6 +21,7 @@ print "Color Values:"
 print 'red:',c.red
 print 'green:',c.green
 print 'blue:',c.blue
+print "Color Values:"
 print 'alpha:',cs.get_current_alpha()
 print "Hex Codes:"
 print tohex((c.red/65536.0, c.green/65536.0, c.blue/65536.0))

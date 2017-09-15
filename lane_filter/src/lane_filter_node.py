@@ -128,7 +128,7 @@ For more info on algorithm and parameters please refer to the google doc:
 			# TUNNING POINT
 			beta = 0.85 # alpha blending
 			angular = 0.0 # TB3 rotation value, +value is left rotation , -value is rigt rotation ,
-			velocity = 0.05 # TB3 Go,Back Speed, +value is Go , -value is Back
+			velocity = 0.07 # TB3 Go,Back Speed, +value is Go , -value is Back
 			#velocity = 0.08
 			#velocity = 0.07
 

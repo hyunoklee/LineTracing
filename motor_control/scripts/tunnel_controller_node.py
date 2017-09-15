@@ -31,6 +31,8 @@ class tunnel_controller(object):
         self.SearchStop = None
         self.frontObstacle = False
         self.leftObstacle = False
+        self.frontObstacleincline = 0
+        self.leftObstacleincline = 0
         # Publicaiton
         self.pub_cmd_vel_tunnel = rospy.Publisher('/cmd_vel_tunnel', Twist, queue_size=5)
 
@@ -41,7 +43,7 @@ class tunnel_controller(object):
         self.sub_signal_reading = rospy.Subscriber("/signals", String, self.cbSignal, queue_size=1)
         #rospy.Timer(rospy.Duration.from_sec(3.0), self.send_motor_start)
         #self.sub_laser_scan = rospy.Subscriber("/scan", LaserScan, self.cbLaserScan, queue_size=1)
-
+        self.sub_laser_scan = None
     def cbSignal(self, signal_msg):
         if signal_msg.data == "TUNNEL":
             if self.sub_laser_scan == None :
@@ -86,14 +88,19 @@ class tunnel_controller(object):
         if self.TunnelState == "GO" :
 
             twist = Twist();
-            if self.leftObstacle  == False :
-                twist.linear.x = 0.05; twist.angular.z = 0.0;
-                twist.angular.z = 0.1
+            twist.linear.x = 0.05; twist.angular.z = 0.0;
+            if self.leftObstacleincline > 0.005 :
+                twist.angular.z = 0.1;
+                print("GO ...............1", self.leftObstacleincline)
+            elif self.leftObstacleincline < - 0.007 :
+                twist.angular.z = -0.1;
+                print("GO ...............2", self.leftObstacleincline)
+            else :
+                print("GO ...............3", self.leftObstacleincline)
             self.pub_cmd_vel_tunnel.publish(twist)
             #sleep(0.1)
-            print("GO ...............", self.frontObstacle, self.leftObstacle )
 
-            if self.frontObstacle == True or self.leftObstacle == True:
+            if self.frontObstacle == True : #or self.leftObstacle == True:
                 self.TunnelState = "ANG_SEARCH_START"
                 self.vehicleStop()
                 print("GO ...............2", self.frontObstacle, self.leftObstacle )
@@ -155,30 +162,42 @@ class tunnel_controller(object):
         #return
         self.laser_scan = laser_scan_msg.ranges
         self.frontObstacle = False
-        rangg = 10
-        for i in range(0,rangg*2) :
-            d = i - rangg
-            if d < 0 :
-               d = 360 + d
+        front_count = 0
+        left_count = 0
+
+        for i in range(0,20) :
+            if i < 10 :
+               d = 350 + i
             else :
-                d = i
+                d = i - 10
             if self.laser_scan[d] != 0 and self.laser_scan[d] < 0.15:
-               rospy.loginfo("_%d , %0.3f" % (d, self.laser_scan[d]))
+               #rospy.loginfo("_%d , %0.3f" % (d, self.laser_scan[d]))
                self.frontObstacle = True
+            elif self.laser_scan[d] == 0 :
+                front_count = front_count + 1
+
+        self.frontObstacleincline = self.laser_scan[350] - self.laser_scan[9]
 
         self.leftObstacle = False
-        rangg = 10
-        for i in range(0,rangg*2) :
-            d = i - rangg
-            if d < 0 :
-               d = 90 + d
-            else :
-                d = i
-            if self.laser_scan[d] != 0 and self.laser_scan[d] < 0.2:
-               rospy.loginfo("_%d , %0.3f" % (d, self.laser_scan[d]))
-               self.leftObstacle = True
 
-        print("obstacle Front " , self.frontObstacle,",Left ",self.leftObstacle )
+        for i in range(90-5,90+5) :
+            if self.laser_scan[i] != 0 and self.laser_scan[i] < 0.15:
+               rospy.loginfo("55_%d , %0.3f" % (i, self.laser_scan[i]))
+               self.leftObstacle = True
+            elif self.laser_scan[i] == 0 :
+                left_count = left_count + 1
+
+        self.leftObstacleincline = self.laser_scan[80] - self.laser_scan[99]
+
+        if front_count > 15 :
+            #self.frontObstacle = True
+            print("front obstacle near")
+
+        if left_count > 15:
+            #self.leftObstacle = True
+            print("left obstacle near")
+
+        print("obstacle Front " , self.frontObstacle,",Left ",self.leftObstacle, self.leftObstacleincline )
 
     def vehicleStop(self):
         twist = Twist(); twist.linear.x = 0; twist.angular.z = 0;

@@ -40,6 +40,7 @@ class LineDetectorNode(object):
         # Publishers
         self.pub_lines = rospy.Publisher("segment_list", SegmentList, queue_size=1)
         self.pub_image_with_line = rospy.Publisher("image_with_lines", Image, queue_size=1)
+        self.pub_image_with_line_o = rospy.Publisher("image_with_lines_o", Image, queue_size=1)
         #self.pub_line_state = rospy.Publisher('/line_state', String, queue_size=1)
         self.pub_signal = rospy.Publisher('/signals', String, queue_size=1)
         #self.pub_image_origin = rospy.Publisher("image_with_origin", Image, queue_size=1)
@@ -157,13 +158,18 @@ class LineDetectorNode(object):
             # image_cv = cv2.GaussianBlur(image_cv, (5,5), 2)
             img_und = cv2.resize(img_und, (self.image_size[1], self.image_size[0]),
                                  interpolation=cv2.INTER_NEAREST)
-
+            img_origin = cv2.resize(image_cv, (self.image_size[1], self.image_size[0]),
+                                 interpolation=cv2.INTER_NEAREST)
         rotation_center = (self.image_size[1]/2, self.image_size[0]/2)
         rotation_mat = cv2.getRotationMatrix2D(rotation_center, 180, 1.0)
         img_und = cv2.warpAffine(img_und, rotation_mat, (self.image_size[1], self.image_size[0]))
         img_und = img_und[self.top_cutoff:,:,:]
+        img_origin = cv2.warpAffine(img_origin, rotation_mat, (self.image_size[1], self.image_size[0]))
+        img_origin = img_origin[:,:,:]
         image_cv_corr = cv2.convertScaleAbs(img_und)
+        image_cv_corr_origin = cv2.convertScaleAbs(img_origin)
 
+        ###############################################
         # Set the image to be detected
         self.detector.setImage(image_cv_corr)
         hei2_original, wid2_original = image_cv_corr.shape[0:2]
@@ -173,8 +179,23 @@ class LineDetectorNode(object):
         yellow = self.detector.detectLines('yellow')
         red = self.detector.detectLines('red')
 
+        ################################################
+
+        self.detector.setImage(image_cv_corr_origin)
+        hei2_original, wid2_original = image_cv_corr_origin.shape[0:2]
+
+        # Detect lines and normals
+        white_o = self.detector.detectLines('white')
+        yellow_o = self.detector.detectLines('yellow')
+        red_o = self.detector.detectLines('red')
+
+        #################################################3
+
         if len(white.lines) > 0 or len(yellow.lines) > 0 or len(red.lines) > 0 :
             self.Linedisable = False
+
+        if len(yellow.lines) < 1 :
+            print("yellow ......... disable ")
 
         # SegmentList constructor
         segmentList = SegmentList()
@@ -195,10 +216,19 @@ class LineDetectorNode(object):
         drawLines(image_with_lines, white.lines, (0, 0, 0))
         drawLines(image_with_lines, yellow.lines, (255, 0, 0))
 
+        image_with_lines_o = np.copy(image_cv_corr_origin)
+        #drawLines(image_with_lines_o, white.lines, (0, 0, 0))
+        drawLines(image_with_lines_o, yellow.lines, (255, 0, 0))
+
         # Publish the frame with lines
         image_msg_out = self.bridge.cv2_to_imgmsg(image_with_lines, "bgr8")
         image_msg_out.header.stamp = image_msg.header.stamp
         self.pub_image_with_line.publish(image_msg_out)
+
+        # Publish the frame with lines
+        image_msg_out_o = self.bridge.cv2_to_imgmsg(image_with_lines_o, "bgr8")
+        #image_msg_out_o.header.stamp = image_msg.header.stamp
+        self.pub_image_with_line_o.publish(image_msg_out_o)
 
     def onShutdown(self):
         self.loginfo("Shutdown.")

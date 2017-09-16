@@ -20,10 +20,26 @@ detector:
       hsv_yellow2:  [75,255,250]
 #      hsv_yellow1: [10,70,100] #[25,70,100]#[25,100,120]#[25,50,90]
 #      hsv_yellow2: [55,255,255] #[45,255,255]
-      hsv_red1:    [0,100,100]
+      hsv_red1:    [0,200,200]
       hsv_red2:    [15,255,255]
-      hsv_red3:    [165,100,100]
+      hsv_red3:    [165,200,200]
       hsv_red4:    [180,255,255]
+
+detector2:
+  - line_detector.LineDetector2Dense
+  - configuration:
+        dilation_kernel_size: 3
+        canny_thresholds: [80,200]
+        sobel_threshold: 40.
+
+        hsv_white1:  [0,0,150]
+        hsv_white2:  [180,60,255]
+        hsv_yellow1: [10,70,100]
+        hsv_yellow2: [75,255,250]
+        hsv_red1:    [0,200,200]
+        hsv_red2:    [15,255,255]
+        hsv_red3:    [165,200,200]
+        hsv_red4:    [180,255,255]
 
 #hsv_yellow1: [25,10,90]
 

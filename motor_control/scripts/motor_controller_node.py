@@ -62,6 +62,7 @@ class motor_controller(object):
 		# timer
 		rospy.loginfo("[%s] Initialized " %(rospy.get_name()))
 		rospy.Timer(rospy.Duration.from_sec(0.1), self.drive_control)
+		self.redtime = rospy.get_time()
 
 	def drive_control(self, _event):
 		if self.con_state == "LINE":
@@ -69,7 +70,7 @@ class motor_controller(object):
 			twist.linear.x = self.cmd_vel_line.linear.x
 			twist.angular.z = self.cmd_vel_line.angular.z
 			self.pub_car_cmd.publish(twist)
-			#print("drive_control.........", twist.linear.x, twist.angular.z)
+			print("LINE...............", twist.linear.x, twist.angular.z)
 		elif self.con_state == "TUNNEL":
 			twist = Twist()
 			twist.linear.x = self.cmd_vel_tunnel.linear.x
@@ -85,6 +86,11 @@ class motor_controller(object):
 			twist.linear.x = self.cmd_vel_bar.linear.x
 			twist.angular.z = self.cmd_vel_bar.angular.z
 			self.pub_car_cmd.publish(twist)
+		elif self.con_state == "RED":
+			nowtime = rospy.get_time()
+			if ( nowtime - self.redtime ) > 1 :
+				#print("RED OUT ...............")
+				self.con_state = "LINE"
 
 	def cbLaserScan(self, laser_scan_msg):
 		# return
@@ -145,6 +151,11 @@ class motor_controller(object):
 	def cbSignal(self,signal_msg):
 		if signal_msg.data == "BAR" :
 			self.con_state = "BAR"
+		elif signal_msg.data == "RED" :
+			self.con_state = "RED"
+			self.vehicleStop()
+			self.redtime = rospy.get_time()
+			print("RED contorl start ....$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 		elif signal_msg.data == "PARKING" :
 			self.con_state = "PARKING"
 		elif signal_msg.data == "TUNNEL" :
